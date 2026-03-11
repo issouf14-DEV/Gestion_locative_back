@@ -1,0 +1,43 @@
+"""
+Configuration pour l'environnement de production
+"""
+from .base import *
+
+DEBUG = False
+
+_allowed_hosts: str = config('ALLOWED_HOSTS', default='')  # type: ignore[assignment]
+ALLOWED_HOSTS = _allowed_hosts.split(',')
+
+# Database
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT', default='5432'),
+        'CONN_MAX_AGE': 600,
+    }
+}
+
+# CORS Settings
+_cors_origins: str = config('CORS_ALLOWED_ORIGINS', default='')  # type: ignore[assignment]
+CORS_ALLOWED_ORIGINS = _cors_origins.split(',')
+CORS_ALLOW_CREDENTIALS = True
+
+# Security Settings
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# Static files
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
+# Cloudinary en production
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
