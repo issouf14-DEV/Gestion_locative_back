@@ -310,3 +310,280 @@ class PaiementService:
         if factures_impayees == 0:
             locataire.statut = 'A_JOUR'
             locataire.save(update_fields=['statut'])
+
+
+class EncaissementService:
+    """
+    Service pour l'encaissement direct des loyers et factures par l'admin
+    Sans validation - paiement enregistré directement comme validé
+    """
+    
+    @staticmethod
+    def encaisser_loyer(
+        locataire_id: str,
+        mois: int,
+        annee: int,
+        montant: Decimal,
+        mode_paiement: str = 'ESPECES',
+        reference_paiement: str = '',
+        notes: str = '',
+        admin: Optional[User] = None
+    ) -> Dict:
+        """
+        Encaisse le loyer d'un locataire (Admin)
+        
+        Args:
+            locataire_id: ID du locataire
+            mois: Mois du loyer
+            annee: Année du loyer
+            montant: Montant encaissé
+            mode_paiement: ESPECES, VIREMENT, MOBILE_MONEY, CHEQUE
+            reference_paiement: Référence du paiement externe
+            notes: Notes supplémentaires
+            admin: L'admin qui fait l'encaissement
+        """
+        from apps.users.models import User as UserModel
+        
+        locataire = UserModel.objects.get(id=locataire_id)
+        
+        # Trouver la facture de loyer correspondante
+        facture = Facture.objects.filter(
+            locataire=locataire,
+            type_facture='LOYER',
+            mois=mois,
+            annee=annee,
+            statut__in=['EN_ATTENTE', 'EN_RETARD']
+        ).first()
+        
+        if not facture:
+            raise ValueError(f"Aucune facture de loyer trouvée pour {locataire.get_full_name()} - {mois}/{annee}")
+        
+        with transaction.atomic():
+            # Créer le paiement validé directement
+            paiement = Paiement.objects.create(
+                locataire=locataire,
+                montant=montant,
+                factures_ids=[str(facture.id)],
+                notes_locataire=f"Encaissement direct - {mode_paiement}" + (f" - Réf: {reference_paiement}" if reference_paiement else ""),
+                statut='VALIDE',
+                validateur=admin,
+                date_validation=timezone.now(),
+                commentaire_admin=notes or f"Encaissement {mode_paiement}"
+            )
+            
+            # Marquer la facture comme payée
+            facture.statut = 'PAYEE'
+            facture.save()
+            
+            # Mettre à jour le statut du locataire
+            PaiementService._mettre_a_jour_statut_locataire(locataire)
+            
+            # Notifier le locataire
+            Notification.objects.create(
+                destinataire=locataire,
+                type_notification='PAIEMENT',
+                titre="Loyer encaissé",
+                message=f"Votre loyer de {mois}/{annee} ({montant:,.0f} FCFA) a été enregistré. Merci!"
+            )
+        
+        return {
+            'success': True,
+            'paiement_id': str(paiement.id),
+            'reference': paiement.reference,
+            'locataire': locataire.get_full_name(),
+            'montant': float(montant),
+            'mois': mois,
+            'annee': annee,
+            'mode_paiement': mode_paiement,
+            'message': f"Loyer de {locataire.get_full_name()} encaissé avec succès"
+        }
+    
+    @staticmethod
+    def encaisser_facture(
+        facture_id: str,
+        montant: Decimal,
+        mode_paiement: str = 'ESPECES',
+        reference_paiement: str = '',
+        notes: str = '',
+        admin: Optional[User] = None
+    ) -> Dict:
+        """
+        Encaisse une facture spécifique (loyer, SODECI, CIE, etc.)
+        
+        Args:
+            facture_id: ID de la facture
+            montant: Montant encaissé
+            mode_paiement: Mode de paiement
+            reference_paiement: Référence externe
+            notes: Notes
+            admin: Admin qui encaisse
+        """
+        facture = Facture.objects.select_related('locataire').get(id=facture_id)
+        
+        if facture.statut == 'PAYEE':
+            raise ValueError("Cette facture est déjà payée")
+        
+        locataire = facture.locataire
+        
+        with transaction.atomic():
+            # Créer le paiement
+            paiement = Paiement.objects.create(
+                locataire=locataire,
+                montant=montant,
+                factures_ids=[str(facture.id)],
+                notes_locataire=f"Encaissement - {mode_paiement}" + (f" - Réf: {reference_paiement}" if reference_paiement else ""),
+                statut='VALIDE',
+                validateur=admin,
+                date_validation=timezone.now(),
+                commentaire_admin=notes or f"Encaissement {mode_paiement}"
+            )
+            
+            # Marquer la facture comme payée
+            facture.statut = 'PAYEE'
+            facture.save()
+            
+            # Mettre à jour statut locataire
+            PaiementService._mettre_a_jour_statut_locataire(locataire)
+            
+            # Notification
+            type_display = getattr(facture, 'get_type_facture_display', lambda: facture.type_facture)()
+            Notification.objects.create(
+                destinataire=locataire,
+                type_notification='PAIEMENT',
+                titre=f"Paiement {type_display} enregistré",
+                message=f"Votre paiement de {montant:,.0f} FCFA pour {type_display} ({facture.mois}/{facture.annee}) a été enregistré."
+            )
+        
+        return {
+            'success': True,
+            'paiement_id': str(paiement.id),
+            'reference': paiement.reference,
+            'facture_reference': facture.reference,
+            'type_facture': facture.type_facture,
+            'locataire': locataire.get_full_name(),
+            'montant': float(montant),
+            'message': f"Paiement enregistré pour {locataire.get_full_name()}"
+        }
+    
+    @staticmethod
+    def encaisser_multiple(
+        factures_ids: List[str],
+        montant_total: Decimal,
+        mode_paiement: str = 'ESPECES',
+        reference_paiement: str = '',
+        notes: str = '',
+        admin: Optional[User] = None
+    ) -> Dict:
+        """
+        Encaisse plusieurs factures en une seule opération
+        
+        Args:
+            factures_ids: Liste des IDs de factures
+            montant_total: Montant total encaissé
+            mode_paiement: Mode de paiement
+            reference_paiement: Référence
+            notes: Notes
+            admin: Admin
+        """
+        factures = Facture.objects.filter(
+            id__in=factures_ids,
+            statut__in=['EN_ATTENTE', 'EN_RETARD']
+        ).select_related('locataire')
+        
+        if not factures.exists():
+            raise ValueError("Aucune facture valide trouvée")
+        
+        # Vérifier que toutes les factures sont du même locataire
+        locataires = set(f.locataire.id for f in factures)  # type: ignore
+        if len(locataires) > 1:
+            raise ValueError("Toutes les factures doivent appartenir au même locataire")
+        
+        locataire = factures.first().locataire  # type: ignore
+        
+        with transaction.atomic():
+            # Créer le paiement
+            paiement = Paiement.objects.create(
+                locataire=locataire,
+                montant=montant_total,
+                factures_ids=[str(f.id) for f in factures],
+                notes_locataire=f"Encaissement multiple - {mode_paiement}" + (f" - Réf: {reference_paiement}" if reference_paiement else ""),
+                statut='VALIDE',
+                validateur=admin,
+                date_validation=timezone.now(),
+                commentaire_admin=notes or f"Encaissement multiple {mode_paiement}"
+            )
+            
+            # Marquer toutes les factures comme payées
+            factures.update(statut='PAYEE')
+            
+            # Mettre à jour statut locataire
+            PaiementService._mettre_a_jour_statut_locataire(locataire)
+            
+            # Notification
+            Notification.objects.create(
+                destinataire=locataire,
+                type_notification='PAIEMENT',
+                titre="Paiements enregistrés",
+                message=f"Vos paiements ({montant_total:,.0f} FCFA) ont été enregistrés pour {factures.count()} facture(s)."
+            )
+        
+        return {
+            'success': True,
+            'paiement_id': str(paiement.id),
+            'reference': paiement.reference,
+            'locataire': locataire.get_full_name(),
+            'montant': float(montant_total),
+            'nombre_factures': factures.count(),
+            'message': f"{factures.count()} facture(s) payée(s) pour {locataire.get_full_name()}"
+        }
+    
+    @staticmethod
+    def get_factures_impayees_locataire(locataire_id: str) -> List[Dict]:
+        """
+        Liste les factures impayées d'un locataire
+        """
+        factures = Facture.objects.filter(
+            locataire_id=locataire_id,
+            statut__in=['EN_ATTENTE', 'EN_RETARD']
+        ).order_by('-annee', '-mois')
+        
+        return [
+            {
+                'id': str(f.id),
+                'reference': f.reference,
+                'type': f.type_facture,
+                'type_display': getattr(f, 'get_type_facture_display', lambda: f.type_facture)(),
+                'mois': f.mois,
+                'annee': f.annee,
+                'montant': float(f.montant),
+                'statut': f.statut,
+                'date_echeance': f.date_echeance.isoformat() if f.date_echeance else None,
+                'en_retard': f.statut == 'EN_RETARD'
+            }
+            for f in factures
+        ]
+    
+    @staticmethod
+    def get_resume_encaissements_mois(mois: int, annee: int) -> Dict:
+        """
+        Résumé des encaissements du mois
+        """
+        from django.db.models import Sum, Count
+        
+        paiements = Paiement.objects.filter(
+            statut='VALIDE',
+            date_validation__month=mois,
+            date_validation__year=annee
+        )
+        
+        stats = paiements.aggregate(
+            total=Sum('montant'),
+            nombre=Count('id')
+        )
+        
+        return {
+            'mois': mois,
+            'annee': annee,
+            'total_encaisse': float(stats['total'] or 0),
+            'nombre_paiements': stats['nombre'] or 0
+        }

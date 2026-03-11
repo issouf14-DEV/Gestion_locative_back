@@ -184,15 +184,119 @@ class FactureCollective(BaseModel):
         return f"{self.get_type_facture_display()} - {self.mois}/{self.annee}"
 
 
-class IndexCompteur(BaseModel):
+class Compteur(BaseModel):
     """
-    Relevé d'index pour un locataire (pour SODECI/CIE)
+    Compteur physique associé à une propriété/appartement et un locataire
+    Permet de savoir quel locataire utilise quel compteur
     """
     
     TYPE_CHOICES = [
         ('SODECI', 'SODECI (Eau)'),
         ('CIE', 'CIE (Électricité)'),
     ]
+    
+    STATUT_CHOICES = [
+        ('ACTIF', 'Actif'),
+        ('INACTIF', 'Inactif'),
+        ('SUSPENDU', 'Suspendu'),
+    ]
+    
+    # Numéro unique du compteur (sur le compteur physique)
+    numero = models.CharField(
+        _('Numéro du compteur'),
+        max_length=50,
+        unique=True,
+        help_text="Numéro inscrit sur le compteur physique"
+    )
+    
+    type_compteur = models.CharField(
+        _('Type'),
+        max_length=20,
+        choices=TYPE_CHOICES
+    )
+    
+    # Lien avec la propriété
+    maison = models.ForeignKey(
+        'properties.Maison',
+        on_delete=models.CASCADE,
+        related_name='compteurs',
+        verbose_name=_('Maison/Appartement')
+    )
+    
+    # Locataire actuel qui utilise ce compteur
+    locataire_actuel = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='compteurs_utilises',
+        verbose_name=_('Locataire actuel'),
+        null=True,
+        blank=True,
+        help_text="Locataire qui utilise actuellement ce compteur"
+    )
+    
+    # Statut du compteur
+    statut = models.CharField(
+        _('Statut'),
+        max_length=20,
+        choices=STATUT_CHOICES,
+        default='ACTIF'
+    )
+    
+    # Dernier index relevé
+    dernier_index = models.DecimalField(
+        _('Dernier index relevé'),
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0')
+    )
+    date_dernier_releve = models.DateField(
+        _('Date du dernier relevé'),
+        null=True,
+        blank=True
+    )
+    
+    # Photo du compteur
+    photo = models.ImageField(
+        _('Photo du compteur'),
+        upload_to='billing/compteurs/',
+        null=True,
+        blank=True
+    )
+    
+    # Notes
+    notes = models.TextField(_('Notes'), blank=True)
+    
+    class Meta:
+        verbose_name = _('Compteur')
+        verbose_name_plural = _('Compteurs')
+        ordering = ['numero']
+    
+    def __str__(self):
+        loc = self.locataire_actuel.get_full_name() if self.locataire_actuel else "Non assigné"
+        return f"{self.numero} ({self.get_type_compteur_display()}) - {loc}"
+
+
+class IndexCompteur(BaseModel):
+    """
+    Relevé d'index pour un compteur (pour SODECI/CIE)
+    Lie le compteur physique, le locataire et la valeur relevée
+    """
+    
+    TYPE_CHOICES = [
+        ('SODECI', 'SODECI (Eau)'),
+        ('CIE', 'CIE (Électricité)'),
+    ]
+    
+    # Référence au compteur physique
+    compteur = models.ForeignKey(
+        Compteur,
+        on_delete=models.CASCADE,
+        related_name='releves',
+        verbose_name=_('Compteur'),
+        null=True,
+        blank=True,
+        help_text="Compteur physique concerné"
+    )
     
     locataire = models.ForeignKey(
         User,
