@@ -2,8 +2,37 @@
 Serializers pour le module billing
 """
 from rest_framework import serializers
-from .models import Facture, FactureCollective, IndexCompteur
+from .models import Facture, FactureCollective, IndexCompteur, Compteur
 from apps.users.serializers import UserSerializer
+
+
+class CompteurSerializer(serializers.ModelSerializer):
+    """Serializer pour les compteurs"""
+    maison_adresse = serializers.CharField(source='maison.adresse', read_only=True)
+    locataire_nom = serializers.CharField(source='locataire_actuel.get_full_name', read_only=True)
+    type_compteur_display = serializers.CharField(source='get_type_compteur_display', read_only=True)
+    
+    class Meta:
+        model = Compteur
+        fields = '__all__'
+        read_only_fields = ['date_installation', 'dernier_index']
+
+
+class CompteurAssignationSerializer(serializers.Serializer):
+    """Serializer pour assigner un compteur à un locataire"""
+    compteur_id = serializers.IntegerField()
+    locataire_id = serializers.IntegerField()
+    index_initial = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+
+
+class FactureNotificationSerializer(serializers.Serializer):
+    """Serializer pour l'envoi de notifications"""
+    facture_id = serializers.IntegerField()
+    canaux = serializers.ListField(
+        child=serializers.ChoiceField(choices=['email', 'app', 'whatsapp']),
+        required=False,
+        default=['email', 'app']
+    )
 
 
 class FactureSerializer(serializers.ModelSerializer):
