@@ -18,7 +18,7 @@ def generate_reference(prefix='REF'):
     """
     Génère une référence unique avec préfixe
     """
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    timestamp = datetime.now().strftime('%y%m%d%H%M')
     random_part = generate_random_code(4)
     return f"{prefix}-{timestamp}-{random_part}"
 
