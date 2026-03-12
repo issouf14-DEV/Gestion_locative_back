@@ -1,10 +1,13 @@
 """
 Script pour peupler la base de données avec des données de test
+⚠️ ATTENTION: Ce script est UNIQUEMENT pour le développement local!
+⚠️ Ne JAMAIS l'utiliser en production!
 """
 import os
 import django
 from datetime import date, timedelta
 from decimal import Decimal
+from decouple import config
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
 django.setup()
@@ -13,29 +16,49 @@ from apps.users.models import User
 from apps.properties.models import Maison
 from apps.rentals.models import Location
 from apps.billing.models import Facture, IndexCompteur
-from apps.reservations.models import Reservation
 
 
-def create_users():
+def get_admin_config():
+    """Récupérer la configuration admin depuis l'environnement."""
+    return {
+        'email': config('ADMIN_DEV_EMAIL'),
+        'password': config('ADMIN_DEV_PASSWORD'),
+        'nom': config('ADMIN_DEV_NOM'),
+        'prenoms': config('ADMIN_DEV_PRENOMS'),
+        'telephone': config('ADMIN_DEV_PHONE'),
+    }
+
+
+def create_users(admin_config):
     """Créer des utilisateurs de test"""
     print("Création des utilisateurs...")
-    
+
     # Admin
     admin, created = User.objects.get_or_create(
-        email="admin@gestion-locative.com",
+        email=admin_config['email'],
         defaults={
-            'nom': 'Admin',
-            'prenoms': 'Super',
-            'telephone': '0123456789',
+            'nom': admin_config['nom'],
+            'prenoms': admin_config['prenoms'],
+            'telephone': admin_config['telephone'],
             'role': 'ADMIN',
             'is_staff': True,
             'is_superuser': True
         }
     )
     if created:
-        admin.set_password('admin123')
+        admin.set_password(admin_config['password'])
         admin.save()
         print(f"✓ Admin créé: {admin.email}")
+    else:
+        admin.nom = admin_config['nom']
+        admin.prenoms = admin_config['prenoms']
+        admin.telephone = admin_config['telephone']
+        admin.role = 'ADMIN'
+        admin.is_staff = True
+        admin.is_superuser = True
+        admin.set_password(admin_config['password'])
+        admin.save()
+        print(f"✓ Admin mis à jour: {admin.email}")
     
     # Locataires
     locataires_data = [
@@ -230,9 +253,12 @@ def create_index_and_factures(locataires):
 def main():
     print("=" * 50)
     print("SEED DATABASE - Gestion Locative")
+    print("⚠️  DÉVELOPPEMENT LOCAL UNIQUEMENT")
     print("=" * 50)
-    
-    admin, locataires = create_users()
+
+    admin_config = get_admin_config()
+
+    _, locataires = create_users(admin_config)
     maisons = create_properties()
     create_rentals(locataires, maisons)
     create_index_and_factures(locataires)
@@ -240,12 +266,17 @@ def main():
     print("\n" + "=" * 50)
     print("✓ Base de données peuplée avec succès!")
     print("=" * 50)
-    print("\nIdentifiants de connexion:")
-    print(f"Admin: admin@gestion-locative.com / admin123")
-    print(f"Locataire: bebert@test.com / test1234")
-    print("\nAPI: http://localhost:8000/api/")
+    print("\n🔐 Identifiants de connexion:")
+    print(f"Email Admin: {admin_config['email']}")
+    print(f"Mot de passe: {admin_config['password']}")
+    print(f"\nEmail Locataire: bebert@test.com")
+    print(f"Mot de passe: test1234")
+    print("\n📍 URLs:")
+    print("API: http://localhost:8000/api/")
     print("Admin Django: http://localhost:8000/admin/")
     print("Swagger: http://localhost:8000/api/docs/")
+    print("\n⚠️  IMPORTANT: Ces identifiants sont pour le développement UNIQUEMENT!")
+    print("⚠️  En production, utilisez: python manage.py createsuperuser")
     print("=" * 50)
 
 
