@@ -10,6 +10,7 @@ bcrypt>=4.1.2
 # Authentication
 django-allauth>=0.61.0
 dj-rest-auth>=5.0.0
+cryptography>=42.0.0
 
 # Django REST Framework
 djangorestframework>=3.14.0
