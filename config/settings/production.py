@@ -5,8 +5,11 @@ from .base import *
 
 DEBUG = False
 
-_allowed_hosts: str = config('ALLOWED_HOSTS', default='')  # type: ignore[assignment]
-ALLOWED_HOSTS = _allowed_hosts.split(',')
+_allowed_hosts: str = config(
+    'ALLOWED_HOSTS',
+    default='gestion-locative-fqax.onrender.com,.onrender.com,localhost,127.0.0.1',
+)  # type: ignore[assignment]
+ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(',') if host.strip()]
 
 # Database
 DATABASES = {
