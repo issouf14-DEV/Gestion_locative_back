@@ -25,8 +25,11 @@ DATABASES = {
 }
 
 # CORS Settings
-_cors_origins: str = config('CORS_ALLOWED_ORIGINS', default='')  # type: ignore[assignment]
-CORS_ALLOWED_ORIGINS = _cors_origins.split(',')
+# Replace 'votre-frontend.onrender.com' with the actual production frontend URL,
+# or set CORS_ALLOWED_ORIGINS env variable to a comma-separated list of origins.
+_cors_origins_default = 'https://votre-frontend.onrender.com'
+_cors_origins: str = config('CORS_ALLOWED_ORIGINS', default=_cors_origins_default)  # type: ignore[assignment]
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins.split(',') if origin.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
 # Security Settings

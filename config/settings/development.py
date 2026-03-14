@@ -25,6 +25,11 @@ DATABASES = {
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+# Explicit origins (used if CORS_ALLOW_ALL_ORIGINS is set to False)
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+]
 
 # Email Backend pour développement (console)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
