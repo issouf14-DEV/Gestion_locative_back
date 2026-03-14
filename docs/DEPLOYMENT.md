@@ -11,11 +11,21 @@
 
 #### 1. Créer la base de données PostgreSQL
 
+**Option A - Nouvelle base de données Render:**
 1. Sur Render.com → New → PostgreSQL
 2. Nom: `gestion-locative-db`
 3. Plan: Free ou Starter
 4. Créer la base
 5. Noter les informations de connexion
+
+**Option B - Réutiliser une base existante (si limite gratuite atteinte):**
+1. Ouvrir votre base PostgreSQL existante → Shell
+2. Créer une nouvelle base :
+   ```sql
+   CREATE DATABASE gestion_locative;
+   \l  -- Vérifier la création
+   ```
+3. Utiliser les mêmes identifiants mais changer `DB_NAME=gestion_locative`
 
 #### 2. Créer le Web Service
 
@@ -71,7 +81,24 @@ python manage.py collectstatic --noinput
 
 ## 🔧 Configuration PostgreSQL Local
 
-### Installation PostgreSQL
+### Alternatives PostgreSQL Gratuites (si limite Render atteinte)
+
+**Neon.tech** (Recommandé)
+- 10 projets gratuits par compte
+- 3 GB de stockage par base
+- Inscription: https://neon.tech
+- Après création, copiez l'URL de connexion et utilisez-la dans `DATABASE_URL`
+
+**Supabase**
+- 2 projets gratuits
+- 500 MB par base
+- Inscription: https://supabase.com
+
+**ElephantSQL**
+- Plan gratuit: 20 MB
+- Inscription: https://www.elephantsql.com
+
+### Installation PostgreSQL Local
 
 **Windows:**
 ```powershell
@@ -272,6 +299,12 @@ psql -U postgres gestion_locative < backup.sql
 ```
 
 ## 🚨 Troubleshooting
+
+### Erreur: "cannot have more than one active free tier database"
+Render ne permet qu'une seule base PostgreSQL gratuite par compte. Solutions:
+1. **Réutiliser la base existante**: Créez une nouvelle base dans votre PostgreSQL existant (voir Option B ci-dessus)
+2. **Service externe gratuit**: Utilisez Neon.tech, Supabase, ou ElephantSQL
+3. **Payer Render**: Passez au plan Starter ($7/mois) pour plusieurs bases
 
 ### Erreur de migration
 ```bash
