@@ -26,8 +26,48 @@ DATABASES = {
 
 # CORS Settings
 _cors_origins: str = config('CORS_ALLOWED_ORIGINS', default='')  # type: ignore[assignment]
-CORS_ALLOWED_ORIGINS = _cors_origins.split(',')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins.split(',') if origin.strip()]
+
+# Si aucune origin configurée, autoriser toutes les origins (à ajuster en production)
+if not CORS_ALLOWED_ORIGINS:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+
 CORS_ALLOW_CREDENTIALS = True
+
+# Headers et méthodes autorisés
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# CSRF Trusted Origins (nécessaire pour les requêtes POST depuis le frontend)
+_csrf_origins: str = config('CSRF_TRUSTED_ORIGINS', default='')  # type: ignore[assignment]
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins.split(',') if origin.strip()]
+
+# Ajouter automatiquement les origins CORS comme trusted pour CSRF
+if CORS_ALLOWED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.extend([
+        origin for origin in CORS_ALLOWED_ORIGINS
+        if origin not in CSRF_TRUSTED_ORIGINS
+    ])
 
 # Security Settings
 SECURE_SSL_REDIRECT = True
