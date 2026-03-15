@@ -5,7 +5,8 @@ from .base import *
 
 DEBUG = True
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+_allowed_hosts: str = config('ALLOWED_HOSTS', default='gestion-locative-fqax.onrender.com,localhost,127.0.0.1') # type: ignore
+ALLOWED_HOSTS = _allowed_hosts.split(',')
 
 # Database
 DATABASES = {
@@ -23,8 +24,14 @@ DATABASES = {
 }
 
 # CORS Settings
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+CORS_ALLOW_ALL_ORIGINS = True  
 CORS_ALLOW_CREDENTIALS = True
+
+
 
 # Email Backend pour développement (console)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
