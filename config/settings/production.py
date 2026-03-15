@@ -70,6 +70,12 @@ CORS_ALLOW_METHODS = [
 _csrf_origins: str = config('CSRF_TRUSTED_ORIGINS', default='')  # type: ignore[assignment]
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins.split(',') if origin.strip()]
 
+# Ajouter les domaines Render
+CSRF_TRUSTED_ORIGINS.extend([
+    'https://gestion-locative-fqax.onrender.com',
+    'https://*.onrender.com',
+])
+
 # Ajouter localhost pour le développement frontend
 CSRF_TRUSTED_ORIGINS.extend([
     'http://localhost:5173',
@@ -95,8 +101,11 @@ SECURE_HSTS_PRELOAD = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
-# Static files
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+# Static files - Whitenoise pour servir les fichiers statiques
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Ajouter WhiteNoise middleware après SecurityMiddleware
+MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 # Cloudinary en production
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
