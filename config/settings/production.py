@@ -14,10 +14,11 @@ ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(',') if host.stri
 # Database
 # Render fournit automatiquement DATABASE_URL pour les bases PostgreSQL
 import dj_database_url
+import os
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL'),
+        default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
         conn_health_checks=True,
     )
