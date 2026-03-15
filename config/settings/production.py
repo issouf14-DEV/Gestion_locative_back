@@ -28,6 +28,14 @@ DATABASES = {
 _cors_origins: str = config('CORS_ALLOWED_ORIGINS', default='')  # type: ignore[assignment]
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins.split(',') if origin.strip()]
 
+# Ajouter localhost pour le développement frontend
+CORS_ALLOWED_ORIGINS.extend([
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+])
+
 # Si aucune origin configurée, autoriser toutes les origins (à ajuster en production)
 if not CORS_ALLOWED_ORIGINS:
     CORS_ALLOW_ALL_ORIGINS = True
@@ -61,6 +69,14 @@ CORS_ALLOW_METHODS = [
 # CSRF Trusted Origins (nécessaire pour les requêtes POST depuis le frontend)
 _csrf_origins: str = config('CSRF_TRUSTED_ORIGINS', default='')  # type: ignore[assignment]
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins.split(',') if origin.strip()]
+
+# Ajouter localhost pour le développement frontend
+CSRF_TRUSTED_ORIGINS.extend([
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+])
 
 # Ajouter automatiquement les origins CORS comme trusted pour CSRF
 if CORS_ALLOWED_ORIGINS:
