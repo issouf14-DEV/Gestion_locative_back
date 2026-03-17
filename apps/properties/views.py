@@ -134,22 +134,28 @@ class MaisonViewSet(CustomResponseMixin, viewsets.ModelViewSet):
                 status_code=status.HTTP_400_BAD_REQUEST
             )
         
-        images_creees = []
-        for index, image in enumerate(images):
-            image_obj = ImageMaison.objects.create(
-                maison=maison,
-                image=image,
-                ordre=index,
-                est_principale=(index == 0 and not maison.images.filter(est_principale=True).exists())
+        try:
+            images_creees = []
+            for index, image in enumerate(images):
+                image_obj = ImageMaison.objects.create(
+                    maison=maison,
+                    image=image,
+                    ordre=index,
+                    est_principale=(index == 0 and not maison.images.filter(est_principale=True).exists())
+                )
+                images_creees.append(image_obj)
+
+            serializer = ImageMaisonSerializer(images_creees, many=True)
+            return self.success_response(
+                data=serializer.data,
+                message=f"{len(images_creees)} image(s) ajoutée(s) avec succès",
+                status_code=status.HTTP_201_CREATED
             )
-            images_creees.append(image_obj)
-        
-        serializer = ImageMaisonSerializer(images_creees, many=True)
-        return self.success_response(
-            data=serializer.data,
-            message=f"{len(images_creees)} image(s) ajoutée(s) avec succès",
-            status_code=status.HTTP_201_CREATED
-        )
+        except Exception as e:
+            return self.error_response(
+                message=f"Erreur lors de l'upload: {str(e)}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['get'], permission_classes=[AllowAny])
     def images(self, request, pk=None):

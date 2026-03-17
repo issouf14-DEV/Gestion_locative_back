@@ -30,6 +30,9 @@ django-celery-beat>=2.5.0
 cloudinary>=1.38.0
 django-cloudinary-storage>=0.3.0
 
+# PDF Generation
+reportlab>=4.1.0
+
 # Utilities
 python-dateutil>=2.8.2
 pytz>=2024.1

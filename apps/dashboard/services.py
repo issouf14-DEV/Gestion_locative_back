@@ -8,6 +8,7 @@ from apps.users.models import User
 from apps.billing.models import Facture
 from apps.expenses.models import Depense
 from apps.rentals.models import Location
+from apps.reservations.models import Reservation
 
 
 class DashboardService:
@@ -59,6 +60,20 @@ class DashboardService:
             total=Sum('montant')
         )['total'] or 0
         
+        # Réservations
+        reservations_en_attente = Reservation.objects.filter(statut='EN_ATTENTE')
+        total_reservations_en_attente = reservations_en_attente.count()
+        reservations_recentes = list(
+            reservations_en_attente.select_related('user', 'maison')
+            .order_by('-created_at')[:5]
+            .values(
+                'id', 'reference', 'statut',
+                'date_debut_souhaitee', 'duree_mois', 'message', 'created_at',
+                'user__prenoms', 'user__nom', 'user__telephone', 'user__email',
+                'maison__titre', 'maison__reference',
+            )
+        )
+
         return {
             'total_maisons': total_maisons,
             'maisons_disponibles': maisons_disponibles,
@@ -70,6 +85,8 @@ class DashboardService:
             'depenses_mois_courant': depenses_mois_courant,
             'factures_impayees': factures_impayees.count(),
             'montant_factures_impayees': montant_factures_impayees,
+            'reservations_en_attente': total_reservations_en_attente,
+            'reservations_recentes': reservations_recentes,
         }
     
     @staticmethod
