@@ -5,6 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
@@ -22,7 +23,7 @@ from apps.core.mixins import CustomResponseMixin
 class MaisonViewSet(CustomResponseMixin, viewsets.ModelViewSet):
     """
     ViewSet pour la gestion des maisons
-    
+
     list: Liste toutes les maisons (public)
     retrieve: Détails d'une maison (public)
     create: Créer une maison (Admin uniquement)
@@ -30,6 +31,7 @@ class MaisonViewSet(CustomResponseMixin, viewsets.ModelViewSet):
     destroy: Supprimer une maison (Admin uniquement)
     """
     queryset = Maison.objects.prefetch_related('images').all()
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = MaisonFilter
     search_fields = ['titre', 'description', 'commune', 'quartier', 'reference']
