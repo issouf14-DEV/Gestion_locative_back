@@ -66,6 +66,13 @@ class FactureCollectiveSerializer(serializers.ModelSerializer):
         read_only_fields = ['consommation_totale', 'repartie', 'date_repartition']
 
 
+class IndexReleveSerializer(serializers.Serializer):
+    """Serializer pour un relevé d'index dans le payload de répartition"""
+    locataire_id = serializers.UUIDField()
+    index_valeur = serializers.DecimalField(max_digits=10, decimal_places=2)
+    compteur_id = serializers.UUIDField(required=False)
+
+
 class RepartitionFactureSerializer(serializers.Serializer):
     """Serializer pour la répartition des factures"""
     type_facture = serializers.ChoiceField(choices=['SODECI', 'CIE'])
@@ -73,3 +80,4 @@ class RepartitionFactureSerializer(serializers.Serializer):
     mois = serializers.IntegerField(min_value=1, max_value=12)
     annee = serializers.IntegerField(min_value=2020)
     date_echeance = serializers.DateField()
+    index = IndexReleveSerializer(many=True, required=False)

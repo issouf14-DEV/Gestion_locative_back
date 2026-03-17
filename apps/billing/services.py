@@ -570,7 +570,33 @@ class RappelLoyerService:
     Service pour envoyer des rappels de loyer aux locataires
     Via WhatsApp et Email
     """
-    
+
+    @staticmethod
+    def _assurer_factures_loyer_existent(mois: int, annee: int):
+        """
+        Génère automatiquement les factures LOYER pour tous les locataires
+        avec un contrat actif, si elles n'existent pas encore pour le mois donné.
+        """
+        from apps.rentals.models import Location
+        from datetime import date
+
+        locations_actives = Location.objects.filter(
+            statut='ACTIVE'
+        ).select_related('locataire')
+
+        for location in locations_actives:
+            Facture.objects.get_or_create(
+                locataire=location.locataire,
+                type_facture='LOYER',
+                mois=mois,
+                annee=annee,
+                defaults={
+                    'montant': location.loyer_mensuel,
+                    'date_echeance': date(annee, mois, 5),
+                    'statut': 'EN_ATTENTE',
+                }
+            )
+
     @staticmethod
     def generer_message_loyer(locataire, montant: Decimal, mois: int, annee: int, date_echeance=None) -> str:
         """
@@ -752,37 +778,33 @@ La Gestion Locative"""
         canaux: Optional[List[str]] = None
     ) -> Dict:
         """
-        Envoie des rappels de loyer à tous les locataires avec des factures impayées
+        Envoie des rappels de loyer à tous les locataires avec des factures impayées.
+        Génère automatiquement les factures LOYER si elles n'existent pas.
         """
-        from apps.rentals.models import Location
-        
-        # Récupérer tous les contrats actifs
-        locations = Location.objects.filter(
-            statut='ACTIVE'
+        # S'assurer que les factures LOYER existent pour le mois
+        RappelLoyerService._assurer_factures_loyer_existent(mois, annee)
+
+        # Récupérer les factures impayées
+        factures_impayees = Facture.objects.filter(
+            type_facture='LOYER',
+            mois=mois,
+            annee=annee,
+            statut__in=['EN_ATTENTE', 'EN_RETARD']
         ).select_related('locataire')
-        
+
         rappels = []
-        
-        for location in locations:
-            # Vérifier si le loyer est impayé
-            facture_impayee = Facture.objects.filter(
-                locataire=location.locataire,
-                type_facture='LOYER',
+
+        for facture in factures_impayees:
+            result = RappelLoyerService.envoyer_rappel_tous_canaux(
+                locataire_id=str(facture.locataire.id),
+                montant=facture.montant,
                 mois=mois,
                 annee=annee,
-                statut__in=['EN_ATTENTE', 'EN_RETARD']
-            ).first()
-            
-            if facture_impayee:
-                result = RappelLoyerService.envoyer_rappel_tous_canaux(
-                    locataire_id=str(location.locataire.id),
-                    montant=location.loyer_mensuel,
-                    mois=mois,
-                    annee=annee,
-                    canaux=canaux
-                )
-                rappels.append(result)
-        
+                date_echeance=facture.date_echeance,
+                canaux=canaux
+            )
+            rappels.append(result)
+
         return {
             'success': True,
             'mois': mois,
@@ -794,9 +816,12 @@ La Gestion Locative"""
     @staticmethod
     def generer_liens_whatsapp_loyers(mois: int, annee: int) -> Dict:
         """
-        Génère les liens WhatsApp pour tous les loyers impayés du mois
-        Retourne une liste de liens que l'admin peut ouvrir un par un
+        Génère les liens WhatsApp pour tous les loyers impayés du mois.
+        Génère automatiquement les factures LOYER si elles n'existent pas.
         """
+        # S'assurer que les factures LOYER existent pour le mois
+        RappelLoyerService._assurer_factures_loyer_existent(mois, annee)
+
         # Factures de loyer impayées
         factures = Facture.objects.filter(
             type_facture='LOYER',

@@ -102,12 +102,57 @@ class FactureViewSet(CustomResponseMixin, viewsets.ModelViewSet):
         return Facture.objects.filter(locataire=user)
     
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, IsAdminUser])
+    def generer_loyers(self, request):
+        """Génère les factures LOYER pour tous les locataires actifs d'un mois"""
+        mois = request.data.get('mois')
+        annee = request.data.get('annee')
+        date_echeance = request.data.get('date_echeance')
+
+        if not mois or not annee:
+            return self.error_response(message="mois et annee requis")
+
+        try:
+            from datetime import date as date_cls
+            echeance = (
+                date_cls.fromisoformat(date_echeance)
+                if date_echeance
+                else date_cls(int(annee), int(mois), 5)
+            )
+            result = FactureCalculator.generer_factures_loyer(
+                mois=int(mois), annee=int(annee), date_echeance=echeance
+            )
+            return self.success_response(
+                data=result,
+                message=f"{result['nombre_factures']} facture(s) de loyer générée(s)"
+            )
+        except Exception as e:
+            return self.error_response(message=str(e))
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated, IsAdminUser])
     def repartir(self, request):
         """Répartir une facture collective SODECI/CIE"""
         serializer = RepartitionFactureSerializer(data=request.data)
         if serializer.is_valid():
             try:
-                result = FactureCalculator.calculer_repartition(**serializer.validated_data)
+                data = serializer.validated_data
+                index_list = data.pop('index', None)
+
+                # Si des index sont fournis dans le payload, créer les IndexCompteur
+                if index_list:
+                    from apps.users.models import User
+                    for idx in index_list:
+                        IndexCompteur.objects.update_or_create(
+                            locataire_id=idx['locataire_id'],
+                            type_compteur=data['type_facture'],
+                            mois=data['mois'],
+                            annee=data['annee'],
+                            defaults={
+                                'index_valeur': idx['index_valeur'],
+                                'compteur_id': idx.get('compteur_id'),
+                            }
+                        )
+
+                result = FactureCalculator.calculer_repartition(**data)
                 return self.success_response(data=result, message="Répartition effectuée avec succès")
             except Exception as e:
                 return self.error_response(message=str(e))
@@ -174,8 +219,9 @@ class FactureViewSet(CustomResponseMixin, viewsets.ModelViewSet):
         facture = self.get_object()
         
         try:
-            pdf_buffer = FacturePDFGenerator.generer_facture_individuelle(facture)
-            
+            generator = FacturePDFGenerator()
+            pdf_buffer = generator.generer_facture_individuelle(facture)
+
             response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="facture_{facture.reference}.pdf"'
             return response
@@ -192,10 +238,11 @@ class FactureViewSet(CustomResponseMixin, viewsets.ModelViewSet):
             return self.error_response(message="mois et annee requis")
         
         try:
-            pdf_buffer = FacturePDFGenerator.generer_rapport_mensuel(
+            generator = FacturePDFGenerator()
+            pdf_buffer = generator.generer_rapport_mensuel(
                 int(mois), int(annee)
             )
-            
+
             response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="rapport_{mois}_{annee}.pdf"'
             return response
