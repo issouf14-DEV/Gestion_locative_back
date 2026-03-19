@@ -26,7 +26,7 @@ DATABASES = {
 
 # CORS Settings
 _cors_origins: str = config('CORS_ALLOWED_ORIGINS', default='')  # type: ignore[assignment]
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins.split(',') if origin.strip()]
+CORS_ALLOWED_ORIGINS = [origin.strip().rstrip('/') for origin in _cors_origins.split(',') if origin.strip()]
 
 # Ajouter localhost pour le développement frontend
 CORS_ALLOWED_ORIGINS.extend([
