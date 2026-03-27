@@ -94,6 +94,9 @@ class Facture(BaseModel):
     date_emission = models.DateField(_('Date d\'émission'), auto_now_add=True)
     date_echeance = models.DateField(_('Date d\'échéance'))
     
+    # Date de paiement effectif
+    date_paiement = models.DateField(_('Date de paiement'), null=True, blank=True)
+
     # Statut
     statut = models.CharField(
         _('Statut'),

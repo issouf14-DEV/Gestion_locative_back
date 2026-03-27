@@ -243,13 +243,18 @@ class EncaissementViewSet(CustomResponseMixin, viewsets.ViewSet):
             return self.error_response(message="facture_id et montant sont requis")
         
         try:
+            from datetime import date as date_cls
+            date_paiement_raw = request.data.get('date_paiement')
+            date_paiement = date_cls.fromisoformat(date_paiement_raw) if date_paiement_raw else None
+
             result = EncaissementService.encaisser_facture(
                 facture_id=facture_id,
                 montant=Decimal(str(montant)),
                 mode_paiement=request.data.get('mode_paiement', 'ESPECES'),
                 reference_paiement=request.data.get('reference_paiement', ''),
                 notes=request.data.get('notes', ''),
-                admin=request.user
+                admin=request.user,
+                date_paiement=date_paiement
             )
             return self.success_response(data=result, message=result['message'])
         except Exception as e:

@@ -405,7 +405,8 @@ class EncaissementService:
         mode_paiement: str = 'ESPECES',
         reference_paiement: str = '',
         notes: str = '',
-        admin: Optional[User] = None
+        admin: Optional[User] = None,
+        date_paiement: Optional[date] = None
     ) -> Dict:
         """
         Encaisse une facture spécifique (loyer, SODECI, CIE, etc.)
@@ -440,11 +441,12 @@ class EncaissementService:
             
             # Marquer la facture comme payée
             facture.statut = 'PAYEE'
+            facture.date_paiement = date_paiement or timezone.now().date()
             facture.save()
-            
+
             # Mettre à jour statut locataire
             PaiementService._mettre_a_jour_statut_locataire(locataire)
-            
+
             # Notification
             type_display = getattr(facture, 'get_type_facture_display', lambda: facture.type_facture)()
             Notification.objects.create(
