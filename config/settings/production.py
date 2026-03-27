@@ -16,9 +16,16 @@ ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(',') if host.stri
 import dj_database_url
 import os
 
+_database_url = os.environ.get('DATABASE_URL')
+if not _database_url:
+    raise RuntimeError(
+        "La variable d'environnement DATABASE_URL est manquante. "
+        "Configurez une base PostgreSQL sur Render et liez-la au service."
+    )
+
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=_database_url,
         conn_max_age=600,
         conn_health_checks=True,
     )
