@@ -386,7 +386,6 @@ def google_login(request):
             defaults={
                 'nom': google_data.get('family_name', ''),
                 'prenoms': google_data.get('given_name', ''),
-                'telephone': '',  # À compléter par l'utilisateur
                 'email_verified': google_data.get('email_verified', False),
                 'role': 'LOCATAIRE',
             }

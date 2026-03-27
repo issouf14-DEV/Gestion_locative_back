@@ -37,6 +37,9 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
         _('Téléphone'),
         max_length=20,
         unique=True,
+        null=True,
+        blank=True,
+        default=None,
         error_messages={
             'unique': _("Ce numéro de téléphone est déjà utilisé."),
         }
