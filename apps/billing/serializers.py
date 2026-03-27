@@ -40,7 +40,14 @@ class FactureSerializer(serializers.ModelSerializer):
     locataire_nom = serializers.CharField(source='locataire.get_full_name', read_only=True)
     type_facture_display = serializers.CharField(source='get_type_facture_display', read_only=True)
     statut_display = serializers.CharField(source='get_statut_display', read_only=True)
-    
+    maison_titre = serializers.SerializerMethodField()
+
+    def get_maison_titre(self, obj):
+        location = obj.locataire.locations.filter(statut='ACTIVE').first()
+        if location:
+            return location.maison.titre
+        return None
+
     class Meta:
         model = Facture
         fields = '__all__'
