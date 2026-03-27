@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Facture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #2563EB;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .facture-details {
+            background-color: #f9f9f9;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .montant {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563EB;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Facture {{ facture.type_facture_display }}</h1>
+        <p>{{ facture.reference }}</p>
+    </div>
+    
+    <div class="facture-details">
+        <p><strong>Locataire:</strong> {{ facture.locataire.get_full_name }}</p>
+        <p><strong>Période:</strong> {{ facture.mois }}/{{ facture.annee }}</p>
+        <p><strong>Date d'échéance:</strong> {{ facture.date_echeance|date:"d/m/Y" }}</p>
+        
+        {% if facture.consommation %}
+        <table>
+            <tr>
+                <th>Index ancien</th>
+                <td>{{ facture.index_ancien }}</td>
+            </tr>
+            <tr>
+                <th>Index nouveau</th>
+                <td>{{ facture.index_nouveau }}</td>
+            </tr>
+            <tr>
+                <th>Consommation</th>
+                <td>{{ facture.consommation }} unités</td>
+            </tr>
+            <tr>
+                <th>Pourcentage</th>
+                <td>{{ facture.pourcentage }}%</td>
+            </tr>
+        </table>
+        {% endif %}
+        
+        <p class="montant">Montant à payer: {{ facture.montant }} FCFA</p>
+    </div>
+    
+    <p>Merci de procéder au paiement avant la date d'échéance.</p>
+    
+    <p>Cordialement,<br>L'équipe Gestion Locative</p>
+</body>
+</html>

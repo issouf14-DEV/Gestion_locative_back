@@ -1,0 +1,26 @@
+{
+  "include": [
+    "apps",
+    "config",
+    "scripts"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    ".venv",
+    "venv",
+    ".git"
+  ],
+  "extraPaths": [
+    "."
+  ],
+  "pythonVersion": "3.11",
+  "pythonPlatform": "Windows",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": "warning",
+  "reportUnusedVariable": "warning",
+  "venvPath": ".",
+  "venv": "venv"
+}
