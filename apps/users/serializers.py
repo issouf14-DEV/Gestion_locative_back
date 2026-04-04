@@ -69,7 +69,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         """Valide que les mots de passe correspondent si fournis"""
         password = attrs.get('password')
         password_confirm = attrs.get('password_confirm')
-        if password or password_confirm:
+        if password and password_confirm:
             if password != password_confirm:
                 raise serializers.ValidationError({
                     "password": "Les mots de passe ne correspondent pas."
