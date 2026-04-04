@@ -1,6 +1,8 @@
 """
 Serializers pour le module users
 """
+import secrets
+import string
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from .models import User, Profile
@@ -43,36 +45,49 @@ class UserCreateSerializer(serializers.ModelSerializer):
     """Serializer pour la création d'un utilisateur"""
     password = serializers.CharField(
         write_only=True,
-        required=True,
+        required=False,
         validators=[validate_password],
         style={'input_type': 'password'}
     )
     password_confirm = serializers.CharField(
         write_only=True,
-        required=True,
+        required=False,
         style={'input_type': 'password'}
     )
-    
+
     class Meta:
         model = User
         fields = [
             'email', 'telephone', 'nom', 'prenoms',
             'password', 'password_confirm', 'role', 'adresse'
         ]
-    
+
+    def validate_telephone(self, value):
+        """Convertit une chaîne vide en None pour respecter la contrainte unique"""
+        return value or None
+
     def validate(self, attrs):
-        """Valide que les mots de passe correspondent"""
-        if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({
-                "password": "Les mots de passe ne correspondent pas."
-            })
+        """Valide que les mots de passe correspondent si fournis"""
+        password = attrs.get('password')
+        password_confirm = attrs.get('password_confirm')
+        if password or password_confirm:
+            if password != password_confirm:
+                raise serializers.ValidationError({
+                    "password": "Les mots de passe ne correspondent pas."
+                })
         return attrs
-    
+
+    @staticmethod
+    def _generate_password():
+        """Génère un mot de passe aléatoire sécurisé"""
+        alphabet = string.ascii_letters + string.digits + string.punctuation
+        return ''.join(secrets.choice(alphabet) for _ in range(16))
+
     def create(self, validated_data):
-        """Crée un nouvel utilisateur"""
-        validated_data.pop('password_confirm')
-        password = validated_data.pop('password')
-        
+        """Crée un nouvel utilisateur. Si aucun mot de passe fourni, en génère un."""
+        validated_data.pop('password_confirm', None)
+        password = validated_data.pop('password', None) or self._generate_password()
+
         user = User.objects.create_user(
             password=password,
             **validated_data
