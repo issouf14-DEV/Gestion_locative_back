@@ -1,8 +1,6 @@
 """
 Serializers pour le module users
 """
-import secrets
-import string
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from .models import User, Profile
@@ -42,15 +40,10 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    """Serializer pour la création d'un utilisateur"""
+    """Serializer pour la création d'un utilisateur par l'admin"""
     password = serializers.CharField(
         write_only=True,
-        required=False,
-        style={'input_type': 'password'}
-    )
-    password_confirm = serializers.CharField(
-        write_only=True,
-        required=False,
+        required=True,
         style={'input_type': 'password'}
     )
 
@@ -58,35 +51,16 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'email', 'telephone', 'nom', 'prenoms',
-            'password', 'password_confirm', 'role', 'adresse'
+            'password', 'role', 'adresse'
         ]
 
     def validate_telephone(self, value):
         """Convertit une chaîne vide en None pour respecter la contrainte unique"""
         return value or None
 
-    def validate(self, attrs):
-        """Valide que les mots de passe correspondent si fournis"""
-        password = attrs.get('password')
-        password_confirm = attrs.get('password_confirm')
-        if password and password_confirm:
-            if password != password_confirm:
-                raise serializers.ValidationError({
-                    "password": "Les mots de passe ne correspondent pas."
-                })
-        return attrs
-
-    @staticmethod
-    def _generate_password():
-        """Génère un mot de passe aléatoire sécurisé"""
-        alphabet = string.ascii_letters + string.digits + string.punctuation
-        return ''.join(secrets.choice(alphabet) for _ in range(16))
-
     def create(self, validated_data):
-        """Crée un nouvel utilisateur. Si aucun mot de passe fourni, en génère un."""
-        validated_data.pop('password_confirm', None)
-        password = validated_data.pop('password', None) or self._generate_password()
-
+        """Crée un nouvel utilisateur avec le mot de passe défini par l'admin"""
+        password = validated_data.pop('password')
         user = User.objects.create_user(
             password=password,
             **validated_data
