@@ -140,10 +140,10 @@ class LocationViewSet(CustomResponseMixin, viewsets.ModelViewSet):
         
         page = self.paginate_queryset(locations)
         if page is not None:
-            serializer = LocationSerializer(page, many=True)
+            serializer = LocationDetailSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        
-        serializer = LocationSerializer(locations, many=True)
+
+        serializer = LocationDetailSerializer(locations, many=True)
         return self.success_response(
             data=serializer.data,
             message=f"{locations.count()} location(s) active(s)"

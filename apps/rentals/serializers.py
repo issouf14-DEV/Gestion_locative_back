@@ -35,14 +35,18 @@ class LocationSerializer(serializers.ModelSerializer):
 
 class LocationCreateSerializer(serializers.ModelSerializer):
     """Serializer pour créer une location"""
-    
+    # Si True, l'ancienne location active du locataire est résiliée automatiquement
+    force_reassignation = serializers.BooleanField(
+        required=False, default=False, write_only=True
+    )
+
     class Meta:
         model = Location
         fields = [
             'locataire', 'maison', 'date_debut', 'duree_mois',
-            'loyer_mensuel', 'caution_versee', 'notes'
+            'loyer_mensuel', 'caution_versee', 'notes', 'force_reassignation'
         ]
-    
+
     def validate_maison(self, value):
         """Vérifie que la maison est disponible"""
         if value.statut != 'DISPONIBLE':
@@ -50,20 +54,33 @@ class LocationCreateSerializer(serializers.ModelSerializer):
                 f"Cette maison n'est pas disponible (statut: {value.get_statut_display()})"
             )
         return value
-    
-    def validate_locataire(self, value):
-        """Vérifie que le locataire n'a pas déjà une location active"""
-        location_active = Location.objects.filter(
-            locataire=value,
-            statut='ACTIVE'
-        ).first()
-        
-        if location_active:
-            raise serializers.ValidationError(
-                f"Ce locataire a déjà une location active ({location_active.numero_contrat})"
-            )
-        return value
-    
+
+    def validate(self, attrs):
+        """Vérifie que le locataire n'a pas déjà une location active (sauf si force_reassignation)"""
+        locataire = attrs.get('locataire')
+        force = attrs.get('force_reassignation', False)
+
+        if locataire:
+            location_active = Location.objects.filter(
+                locataire=locataire,
+                statut='ACTIVE'
+            ).select_related('maison').first()
+
+            if location_active and not force:
+                raise serializers.ValidationError({
+                    'locataire': (
+                        f"Ce locataire a déjà une location active : "
+                        f"contrat {location_active.numero_contrat} "
+                        f"(maison : {location_active.maison.titre}). "
+                        f"Passez force_reassignation=true pour résilier automatiquement."
+                    )
+                })
+
+            # Stocker pour utilisation dans create()
+            attrs['_location_existante'] = location_active if force else None
+
+        return attrs
+
     def validate_duree_mois(self, value):
         """Vérifie que la durée est valide"""
         if value < 1:
@@ -71,25 +88,37 @@ class LocationCreateSerializer(serializers.ModelSerializer):
         if value > 60:
             raise serializers.ValidationError("La durée ne peut pas dépasser 60 mois")
         return value
-    
+
     def create(self, validated_data):
         """Crée la location avec calcul de la date de fin"""
         from .services import LocationService
-        
+        from django.db import transaction
+
+        validated_data.pop('force_reassignation', None)
+        location_existante = validated_data.pop('_location_existante', None)
+
         date_debut = validated_data['date_debut']
         duree_mois = validated_data['duree_mois']
-        
-        # Calculer la date de fin
         validated_data['date_fin'] = LocationService._calculer_date_fin(date_debut, duree_mois)
-        
-        # Créer la location
-        location = Location.objects.create(**validated_data)
-        
-        # Mettre à jour le statut de la maison
-        maison = validated_data['maison']
-        maison.statut = 'LOUEE'
-        maison.save(update_fields=['statut'])
-        
+
+        with transaction.atomic():
+            # Résilier l'ancienne location si force_reassignation
+            if location_existante:
+                location_existante.statut = 'RESILIEE'
+                location_existante.save(update_fields=['statut'])
+                # Libérer l'ancienne maison
+                ancienne_maison = location_existante.maison
+                ancienne_maison.statut = 'DISPONIBLE'
+                ancienne_maison.save(update_fields=['statut'])
+
+            # Créer la nouvelle location
+            location = Location.objects.create(**validated_data)
+
+            # Marquer la nouvelle maison comme louée
+            maison = validated_data['maison']
+            maison.statut = 'LOUEE'
+            maison.save(update_fields=['statut'])
+
         return location
 
 
