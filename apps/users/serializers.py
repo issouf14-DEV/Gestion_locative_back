@@ -27,16 +27,39 @@ class UserSerializer(serializers.ModelSerializer):
         decimal_places=2,
         read_only=True
     )
-    
+    location_active = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             'id', 'email', 'telephone', 'nom', 'prenoms',
             'role', 'statut', 'photo', 'adresse',
             'is_active', 'email_verified', 'date_joined',
-            'last_login', 'profile', 'dette_totale'
+            'last_login', 'profile', 'dette_totale', 'location_active'
         ]
         read_only_fields = ['id', 'date_joined', 'last_login', 'dette_totale']
+
+    def get_location_active(self, obj):
+        """Retourne la location active du locataire (None pour les autres rôles)"""
+        if obj.role != 'LOCATAIRE':
+            return None
+        from apps.rentals.models import Location
+        try:
+            location = Location.objects.select_related('maison').get(
+                locataire=obj, statut='ACTIVE'
+            )
+            return {
+                'id': location.id,
+                'maison': {
+                    'id': location.maison.id,
+                    'titre': location.maison.titre,
+                    'adresse': location.maison.adresse,
+                },
+                'date_debut': location.date_debut,
+                'loyer_mensuel': str(location.loyer_mensuel),
+            }
+        except Location.DoesNotExist:
+            return None
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
