@@ -44,10 +44,10 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.role != 'LOCATAIRE':
             return None
         from apps.rentals.models import Location
-        try:
-            location = Location.objects.select_related('maison').get(
-                locataire=obj, statut='ACTIVE'
-            )
+        location = Location.objects.select_related('maison').filter(
+            locataire=obj, statut='ACTIVE'
+        ).first()
+        if location:
             return {
                 'id': location.id,
                 'maison': {
@@ -58,8 +58,7 @@ class UserSerializer(serializers.ModelSerializer):
                 'date_debut': location.date_debut,
                 'loyer_mensuel': str(location.loyer_mensuel),
             }
-        except Location.DoesNotExist:
-            return None
+        return None
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
