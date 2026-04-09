@@ -56,9 +56,10 @@ class UserViewSet(CustomResponseMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         """Retourne le queryset approprié selon le rôle"""
         user = self.request.user
+        qs = User.objects.prefetch_related('locations__maison')
         if user.is_admin:  # type: ignore[union-attr]
-            return User.objects.all()
-        return User.objects.filter(id=user.id)  # type: ignore[union-attr]
+            return qs
+        return qs.filter(id=user.id)  # type: ignore[union-attr]
     
     def retrieve(self, request, *args, **kwargs):
         """Récupère les détails d'un utilisateur avec réponse standardisée"""
@@ -132,7 +133,7 @@ class UserViewSet(CustomResponseMixin, viewsets.ModelViewSet):
         """
         Retourne uniquement les locataires (Admin uniquement)
         """
-        locataires = User.objects.get_locataires()  # type: ignore[attr-defined]
+        locataires = User.objects.get_locataires().prefetch_related('locations__maison')  # type: ignore[attr-defined]
         
         # Filtres optionnels
         statut = request.query_params.get('statut', None)
