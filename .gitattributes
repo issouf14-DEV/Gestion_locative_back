@@ -1,0 +1,5 @@
+# Fins de ligne Unix obligatoires pour les scripts exécutés sur Render (Linux)
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+.python-version text eol=lf
