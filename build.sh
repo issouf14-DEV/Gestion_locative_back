@@ -12,3 +12,10 @@ python manage.py migrate --noinput
 if [ -n "$DJANGO_SUPERUSER_EMAIL" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
   python manage.py create_superuser
 fi
+
+# Données de démonstration : SEED_DEMO=creer pour les ajouter, SEED_DEMO=supprimer pour les retirer
+if [ "$SEED_DEMO" = "creer" ]; then
+  python manage.py seed_demo
+elif [ "$SEED_DEMO" = "supprimer" ]; then
+  python manage.py seed_demo --supprimer
+fi
