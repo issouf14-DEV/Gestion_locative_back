@@ -74,12 +74,21 @@ class Activite:
 
     # ------------------------------------------------------------------ création
     def creer(self):
-        if User.objects.filter(email__endswith=DOMAINE).exists():
-            self.out('Activité de démo déjà présente : rien à faire.')
-            return
         maisons = {m.reference: m for m in Maison.objects.filter(reference__startswith='DEMO-')}
         if not maisons:
             self.out('Aucune maison de démo : activité ignorée.')
+            return
+        # Numérotation à la suite de l'existant (permet un ajout après coup)
+        self.n_facture = Facture.objects.filter(reference__startswith='DEMO-').count()
+        self.n_paiement = Paiement.objects.filter(reference__startswith='DEMO-').count()
+        self.preuve = Paiement.objects.filter(reference__startswith='DEMO-').values_list('preuve', flat=True).first()
+        if User.objects.filter(email__endswith=DOMAINE).exists():
+            compte_reel = self._compte_reel()
+            if compte_reel and not Location.objects.filter(maison=maisons[MAISON_COMPTE_REEL]).exists():
+                self._location(compte_reel, maisons[MAISON_COMPTE_REEL], 5)
+                self.out(f'Location de démo ajoutée au compte {compte_reel.email}.')
+            else:
+                self.out('Activité de démo déjà présente : rien à faire.')
             return
         mot_de_passe = os.environ.get('DEMO_ADMIN_PASSWORD') or None
 
