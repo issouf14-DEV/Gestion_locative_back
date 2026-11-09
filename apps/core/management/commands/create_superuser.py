@@ -58,10 +58,20 @@ class Command(BaseCommand):
             ))
             return
 
-        if User.objects.filter(email=email).exists():
+        existant = User.objects.filter(email__iexact=email).first()
+        if existant and existant.is_superuser:
             self.stdout.write(
-                self.style.WARNING(f'Le superuser avec l\'email {email} existe déjà.')
+                self.style.WARNING(f'Le superuser avec l\'email {existant.email} existe déjà.')
             )
+            return
+        if existant:
+            # Compte déjà inscrit (ex. locataire) : on le promeut administrateur, une seule fois
+            existant.is_superuser = True
+            existant.is_staff = True
+            existant.role = 'ADMIN'
+            existant.set_password(password)
+            existant.save()
+            self.stdout.write(self.style.SUCCESS(f'Compte {existant.email} promu super admin.'))
             return
 
         user = User.objects.create_superuser(
