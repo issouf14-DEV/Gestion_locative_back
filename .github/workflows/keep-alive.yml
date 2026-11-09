@@ -1,0 +1,26 @@
+# Garde le service Render (plan gratuit) éveillé : il s'endort après 15 min sans requête.
+# Définir la variable du dépôt RENDER_URL (Settings > Secrets and variables > Actions > Variables),
+# par exemple https://gestion-locative-api.onrender.com
+name: Garder Render éveillé
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /health/
+        env:
+          RENDER_URL: ${{ vars.RENDER_URL }}
+        run: |
+          if [ -z "$RENDER_URL" ]; then
+            echo "Variable RENDER_URL non définie : rien à faire."
+            exit 0
+          fi
+          curl --fail --silent --show-error --retry 3 --retry-delay 20 --max-time 90 "$RENDER_URL/health/"

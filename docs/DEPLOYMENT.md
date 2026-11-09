@@ -22,6 +22,15 @@ Le fichier `render.yaml` décrit toute l'infrastructure : le service web (Gunico
 
 4. Déployer, puis vérifier : `https://<service>.onrender.com/health/` doit renvoyer `{"status": "ok"}`, et la documentation est sur `/api/docs/`.
 
+### Garder le service éveillé
+
+Sur le plan gratuit, Render endort le service après 15 minutes sans requête, et le réveil prend environ 1 minute. Le workflow `.github/workflows/keep-alive.yml` appelle `/health/` toutes les 10 minutes.
+
+1. Sur GitHub : **Settings > Secrets and variables > Actions > Variables > New repository variable**, avec `RENDER_URL` = `https://<service>.onrender.com` (sans `/` à la fin).
+2. Onglet **Actions** > « Garder Render éveillé » > **Run workflow**, pour tester.
+
+Remarque : GitHub désactive les workflows planifiés après 60 jours sans commit sur le dépôt. Il suffit alors de les réactiver dans l'onglet Actions.
+
 ### Notes
 
 - **Celery** : le plan gratuit n'a pas de worker. Sans `REDIS_URL`, les tâches s'exécutent directement. Pour un vrai worker, créer un Key Value Render et un Background Worker (`celery -A config worker -l info`), puis lier `REDIS_URL` (voir la partie en commentaire dans `render.yaml`).
