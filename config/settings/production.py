@@ -12,8 +12,9 @@ DEBUG = False
 # ------------------------------------------------------------------------------
 # Clé secrète : obligatoire, jamais la valeur par défaut
 # ------------------------------------------------------------------------------
-if not SECRET_KEY or SECRET_KEY.startswith('django-insecure') or len(SECRET_KEY) < 50:
-    raise RuntimeError("SECRET_KEY absente ou trop faible (50 caractères minimum).")
+# Render (generateValue) produit 256 bits encodés en base64, soit 44 caractères
+if not SECRET_KEY or SECRET_KEY.startswith('django-insecure') or len(SECRET_KEY) < 32:
+    raise RuntimeError("SECRET_KEY absente ou trop faible (32 caractères minimum).")
 SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
 
 
@@ -30,8 +31,7 @@ ALLOWED_HOSTS = _liste('ALLOWED_HOSTS')
 _render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if _render_host:
     ALLOWED_HOSTS.append(_render_host)
-if not ALLOWED_HOSTS:
-    raise RuntimeError("Aucun hôte autorisé : définissez ALLOWED_HOSTS.")
+# Sans hôte connu (ex. pendant le build), Django refuse simplement toutes les requêtes
 
 # ------------------------------------------------------------------------------
 # Base de données (DATABASE_URL fournie par la base PostgreSQL Render)
