@@ -37,4 +37,4 @@ CORS_ALLOW_CREDENTIALS = True
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Désactiver Cloudinary en dev si nécessaire
-# DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+# STORAGES['default'] = {'BACKEND': 'django.core.files.storage.FileSystemStorage'}

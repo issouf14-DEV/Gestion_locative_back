@@ -221,7 +221,11 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
 }
 
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# Stockage des fichiers (Django 5.1+ : STORAGES remplace DEFAULT_FILE_STORAGE)
+STORAGES = {
+    'default': {'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
 
 # ==============================================================================
 # CELERY CONFIGURATION

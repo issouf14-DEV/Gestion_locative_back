@@ -1,16 +1,16 @@
 -r base.txt
 
-# Production server
-gunicorn>=21.2.0
+# Serveur de production
+gunicorn>=26.2.0
 
-# Static files
-whitenoise>=6.6.0
+# Fichiers statiques
+whitenoise>=6.12.0
 
-# Database
-dj-database-url>=2.1.0
+# Base de données
+dj-database-url>=3.1.2
 
-# Monitoring & Logging
-sentry-sdk>=1.40.0
+# Supervision
+sentry-sdk>=2.74.0
 
 # Performance
-django-redis>=5.4.0
+django-redis>=7.0.0
