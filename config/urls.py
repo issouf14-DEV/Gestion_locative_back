@@ -36,7 +36,13 @@ def api_root(request):
     })
 
 
+def health(request):
+    """Vérification de santé utilisée par Render"""
+    return JsonResponse({'status': 'ok'})
+
+
 urlpatterns = [
+    path('health/', health, name='health'),
     # Racine - Redirection vers la documentation
     path('', RedirectView.as_view(url='/api/docs/', permanent=False), name='root'),
     path('api/', api_root, name='api-root'),

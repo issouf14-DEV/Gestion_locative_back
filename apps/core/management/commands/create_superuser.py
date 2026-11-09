@@ -22,7 +22,7 @@ class Command(BaseCommand):
             '--password',
             type=str,
             help='Mot de passe du superuser',
-            default=os.environ.get('DJANGO_SUPERUSER_PASSWORD', 'Admin@2024!')
+            default=os.environ.get('DJANGO_SUPERUSER_PASSWORD', '')
         )
         parser.add_argument(
             '--nom',
@@ -49,6 +49,14 @@ class Command(BaseCommand):
         nom = options['nom']
         prenoms = options['prenoms']
         telephone = options['telephone']
+
+        # Aucun mot de passe par défaut : on refuse de créer un admin devinable
+        if not password or len(password) < 12:
+            self.stdout.write(self.style.WARNING(
+                'DJANGO_SUPERUSER_PASSWORD absent ou trop court (12 caractères min.) : '
+                'superuser non créé.'
+            ))
+            return
 
         if User.objects.filter(email=email).exists():
             self.stdout.write(

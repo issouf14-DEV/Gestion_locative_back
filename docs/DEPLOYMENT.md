@@ -1,83 +1,32 @@
 # Guide de Déploiement - Gestion Locative Backend
 
-## 🚀 Déploiement sur Render.com
+## 🚀 Déploiement sur Render.com (Blueprint)
 
-### Prérequis
-- Compte Render.com
-- Repository Git (GitHub, GitLab)
-- Base de données PostgreSQL
+Le fichier `render.yaml` décrit toute l'infrastructure : le service web (Gunicorn), la base PostgreSQL et les variables d'environnement. `build.sh` installe les dépendances, lance `collectstatic` et `migrate`, et crée l'admin si les variables sont présentes.
 
 ### Étapes
 
-#### 1. Créer la base de données PostgreSQL
+1. Sur Render : **New > Blueprint**, puis choisir le dépôt GitHub et la branche `main`.
+2. Render crée `gestion-locative-api` et `gestion-locative-db`. `SECRET_KEY` est générée automatiquement et `DATABASE_URL` est liée à la base.
+3. Renseigner les variables marquées `sync: false` :
 
-**Option A - Nouvelle base de données Render:**
-1. Sur Render.com → New → PostgreSQL
-2. Nom: `gestion-locative-db`
-3. Plan: Free ou Starter
-4. Créer la base
-5. Noter les informations de connexion
+| Variable | Obligatoire | Exemple |
+|---|---|---|
+| `CORS_ALLOWED_ORIGINS` | oui (frontend) | `https://mon-front.vercel.app` |
+| `DJANGO_SUPERUSER_EMAIL` / `DJANGO_SUPERUSER_PASSWORD` | au premier déploiement | mot de passe de 12 caractères minimum |
+| `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | pour les images | sinon, stockage disque éphémère |
+| `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | pour les emails | mot de passe d'application Gmail |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | connexion Google | |
+| `ALLOWED_HOSTS` | non | domaine personnalisé (le domaine `*.onrender.com` est ajouté automatiquement) |
+| `SENTRY_DSN` | non | |
 
-**Option B - Réutiliser une base existante (si limite gratuite atteinte):**
-1. Ouvrir votre base PostgreSQL existante → Shell
-2. Créer une nouvelle base :
-   ```sql
-   CREATE DATABASE gestion_locative;
-   \l  -- Vérifier la création
-   ```
-3. Utiliser les mêmes identifiants mais changer `DB_NAME=gestion_locative`
+4. Déployer, puis vérifier : `https://<service>.onrender.com/health/` doit renvoyer `{"status": "ok"}`, et la documentation est sur `/api/docs/`.
 
-#### 2. Créer le Web Service
+### Notes
 
-1. Sur Render.com → New → Web Service
-2. Connecter le repository Git
-3. Configuration:
-   - **Name**: gestion-locative-backend
-   - **Environment**: Python 3
-   - **Build Command**: `pip install -r requirements/production.txt`
-   - **Start Command**: `gunicorn config.wsgi:application`
-   - **Plan**: Free ou Starter
-
-#### 3. Variables d'environnement
-
-Ajouter dans Render Dashboard → Environment:
-
-```
-SECRET_KEY=votre-cle-secrete-tres-longue-et-aleatoire
-DJANGO_SETTINGS_MODULE=config.settings.production
-DEBUG=False
-
-DB_NAME=<depuis Render PostgreSQL>
-DB_USER=<depuis Render PostgreSQL>
-DB_PASSWORD=<depuis Render PostgreSQL>
-DB_HOST=<depuis Render PostgreSQL>
-DB_PORT=5432
-
-ALLOWED_HOSTS=votre-app.onrender.com
-CORS_ALLOWED_ORIGINS=https://votre-frontend.vercel.app
-
-CLOUDINARY_CLOUD_NAME=votre_cloud_name
-CLOUDINARY_API_KEY=votre_api_key
-CLOUDINARY_API_SECRET=votre_api_secret
-
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_HOST_USER=votre-email@gmail.com
-EMAIL_HOST_PASSWORD=votre-app-password
-
-FRONTEND_URL=https://votre-frontend.vercel.app
-```
-
-#### 4. Migrations et Superuser
-
-Après le premier déploiement:
-
-```bash
-# Via Render Shell
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py collectstatic --noinput
-```
+- **Celery** : le plan gratuit n'a pas de worker. Sans `REDIS_URL`, les tâches s'exécutent directement. Pour un vrai worker, créer un Key Value Render et un Background Worker (`celery -A config worker -l info`), puis lier `REDIS_URL` (voir la partie en commentaire dans `render.yaml`).
+- **Sécurité** : la production refuse de démarrer sans `SECRET_KEY` forte ou sans `DATABASE_URL`. Aucune origine localhost n'est acceptée et CORS n'est jamais ouvert à tous.
+- La base gratuite Render expire au bout de 30 jours : pensez à faire une sauvegarde (voir plus bas).
 
 ## 🔧 Configuration PostgreSQL Local
 
