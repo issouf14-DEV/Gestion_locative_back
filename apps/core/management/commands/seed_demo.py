@@ -5,6 +5,9 @@ Données de démonstration : un 2e super admin et 12 maisons d'Abidjan avec phot
     python manage.py seed_demo --supprimer  # supprime tout ce qui a été créé
 
 Le 2e admin est lu depuis DEMO_ADMIN_EMAIL et DEMO_ADMIN_PASSWORD (12 caractères min.).
+Ensuite : locataires, locations, factures, paiements, dépenses, réservations, notifications
+(voir _demo_activite.py). DEMO_LOCATAIRE_EMAIL (optionnel) : un vrai compte locataire
+qui reçoit aussi une location de démo.
 Les maisons de démo ont une référence qui commence par « DEMO- ».
 """
 import os
@@ -17,6 +20,8 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.properties.models import ImageMaison, Maison
+
+from ._demo_activite import Activite
 
 PREFIXE = 'DEMO-'
 UNSPLASH = 'https://images.unsplash.com/photo-{}?w=1200&q=75&fm=jpg'
@@ -77,10 +82,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options['supprimer']:
+            Activite(self.stdout.write).supprimer()
             self.supprimer()
         else:
             self.creer_admin()
             self.creer_maisons()
+            with transaction.atomic():
+                Activite(self.stdout.write).creer()
 
     def creer_admin(self):
         email = os.environ.get('DEMO_ADMIN_EMAIL', '').strip()
